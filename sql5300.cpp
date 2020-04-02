@@ -258,7 +258,7 @@ int main(int argc, char **argv) {
     env.set_error_stream(&cerr);
     try {
         env.open(envHome, DB_CREATE | DB_INIT_MPOOL, 0);
-    } catch (DbException exc) {
+    } catch (DbException &exc) {
         cerr << "(sql5300: " << exc.what() << ")";
         exit(1);
     }
