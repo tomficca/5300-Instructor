@@ -37,3 +37,4 @@ sql5300
 *.iml
 cmake-build-debug/
 data/
+CMakeLists.txt
