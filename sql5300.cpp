@@ -1,17 +1,13 @@
 /**
- * @file sql5300.cpp - main entry for the relation manaager's SQL shell
+ * @file sql5300.cpp - main entry for the relation manager's SQL shell
  * @author Kevin Lundeen
  * @see "Seattle University, cpsc4300/5300, summer 2018"
  */
-#include <stdio.h>
-#include <stdlib.h>
-#include <cstring>
+#include <cstdlib>
 #include <iostream>
 #include <string>
-#include <cassert>
 #include "db_cxx.h"
 #include "SQLParser.h"
-#include "sqlhelper.h"
 #include "heap_storage.h"
 
 using namespace std;
@@ -55,7 +51,7 @@ string expressionToString(const Expr *expr) {
             ret += operatorExpressionToString(expr);
             break;
         default:
-            ret += "???";  // in case there are exprssion types we don't know about here
+            ret += "???";  // in case there are expression types we don't know about here
             break;
     }
     if (expr->alias != NULL)
@@ -181,7 +177,7 @@ string columnDefinitionToString(const ColumnDefinition *col) {
 /**
  * Execute an SQL select statement (but for now, just spit back the SQL)
  * @param stmt  Hyrise AST for the select statement
- * @returns     a string (for now) of the SQL statment
+ * @returns     a string (for now) of the SQL statement
  */
 string executeSelect(const SelectStatement *stmt) {
     string ret("SELECT ");
@@ -201,7 +197,7 @@ string executeSelect(const SelectStatement *stmt) {
 /**
  * Execute an SQL insert statement (but for now, just spit back the SQL)
  * @param stmt  Hyrise AST for the insert statement
- * @returns     a string (for now) of the SQL statment
+ * @returns     a string (for now) of the SQL statement
  */
 string executeInsert(const InsertStatement *stmt) {
     return "INSERT ...";
@@ -210,7 +206,7 @@ string executeInsert(const InsertStatement *stmt) {
 /**
  * Execute an SQL create statement (but for now, just spit back the SQL)
  * @param stmt  Hyrise AST for the create statement
- * @returns     a string (for now) of the SQL statment
+ * @returns     a string (for now) of the SQL statement
  */
 string executeCreate(const CreateStatement *stmt) {
     string ret("CREATE TABLE ");
@@ -233,7 +229,7 @@ string executeCreate(const CreateStatement *stmt) {
 /**
  * Execute an SQL statement (but for now, just spit back the SQL)
  * @param stmt  Hyrise AST for the statement
- * @returns     a string (for now) of the SQL statment
+ * @returns     a string (for now) of the SQL statement
  */
 string execute(const SQLStatement *stmt) {
     switch (stmt->type()) {
@@ -254,7 +250,7 @@ string execute(const SQLStatement *stmt) {
  */
 int main(int argc, char *argv[]) {
 
-    // Open/create the db enviroment
+    // Open/create the db environment
     if (argc != 2) {
         cerr << "Usage: cpsc5300: dbenvpath" << endl;
         return 1;
