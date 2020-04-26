@@ -47,7 +47,7 @@ QueryResult::~QueryResult() {
 }
 
 
-QueryResult *SQLExec::execute(const SQLStatement *statement) throw(SQLExecError) {
+QueryResult *SQLExec::execute(const SQLStatement *statement) {
     // FIXME: initialize _tables table, if not yet present
 
     try {

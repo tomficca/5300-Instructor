@@ -62,7 +62,7 @@ public:
      * @param statement   the Hyrise AST of the SQL statement to execute
      * @returns           the query result (freed by caller)
      */
-    static QueryResult *execute(const hsql::SQLStatement *statement) throw(SQLExecError);
+    static QueryResult *execute(const hsql::SQLStatement *statement);
 
 protected:
     // the one place in the system that holds the _tables table
