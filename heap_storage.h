@@ -45,31 +45,31 @@ public:
 
     virtual RecordID add(const Dbt *data);
 
-    virtual Dbt *get(RecordID record_id);
+    virtual Dbt *get(RecordID record_id) const;
 
     virtual void put(RecordID record_id, const Dbt &data);
 
     virtual void del(RecordID record_id);
 
-    virtual RecordIDs *ids(void);
+    virtual RecordIDs *ids(void) const;
 
 protected:
-    u_int16_t num_records;
-    u_int16_t end_free;
+    uint16_t num_records;
+    uint16_t end_free;
 
-    virtual void get_header(u_int16_t &size, u_int16_t &loc, RecordID id = 0);
+    void get_header(uint16_t &size, uint16_t &loc, RecordID id = 0) const;
 
-    virtual void put_header(RecordID id = 0, u_int16_t size = 0, u_int16_t loc = 0);
+    void put_header(RecordID id = 0, uint16_t size = 0, uint16_t loc = 0);
 
-    virtual bool has_room(u_int16_t size);
+    bool has_room(uint16_t size) const;
 
-    virtual void slide(u_int16_t start, u_int16_t end);
+    virtual void slide(uint16_t start, uint16_t end);
 
-    virtual u_int16_t get_n(u_int16_t offset);
+    uint16_t get_n(uint16_t offset) const;
 
-    virtual void put_n(u_int16_t offset, u_int16_t n);
+    void put_n(uint16_t offset, uint16_t n);
 
-    virtual void *address(u_int16_t offset);
+    void *address(uint16_t offset) const;
 };
 
 /**
@@ -82,7 +82,7 @@ protected:
  */
 class HeapFile : public DbFile {
 public:
-    HeapFile(std::string name) : DbFile(name), dbfilename(""), last(0), closed(true), db(_DB_ENV, 0) {}
+    HeapFile(std::string name);
 
     virtual ~HeapFile() {}
 
@@ -108,17 +108,23 @@ public:
 
     virtual void put(DbBlock *block);
 
-    virtual BlockIDs *block_ids();
+    virtual BlockIDs *block_ids() const;
 
-    virtual u_int32_t get_last_block_id() { return last; }
+    /**
+     * Get the id of the current final block in the heap file.
+     * @return block id of last block
+     */
+    virtual uint32_t get_last_block_id() { return last; }
 
 protected:
     std::string dbfilename;
-    u_int32_t last;
+    uint32_t last;
     bool closed;
     Db db;
 
     virtual void db_open(uint flags = 0);
+
+    virtual uint32_t get_block_count();
 };
 
 /**
@@ -163,16 +169,20 @@ public:
 
     virtual ValueDict *project(Handle handle, const ColumnNames *column_names);
 
+    using DbRelation::project;
+
 protected:
     HeapFile file;
 
-    virtual ValueDict *validate(const ValueDict *row);
+    virtual ValueDict *validate(const ValueDict *row) const;
 
     virtual Handle append(const ValueDict *row);
 
-    virtual Dbt *marshal(const ValueDict *row);
+    virtual Dbt *marshal(const ValueDict *row) const;
 
-    virtual ValueDict *unmarshal(Dbt *data);
+    virtual ValueDict *unmarshal(Dbt *data) const;
+
+    virtual bool selected(Handle handle, const ValueDict *where);
 };
 
 bool test_heap_storage();

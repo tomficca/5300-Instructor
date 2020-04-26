@@ -7,7 +7,7 @@
 #include "heap_storage.h"
 
 using namespace std;
-typedef u_int16_t u16;
+typedef uint16_t u16;
 
 /*
  * =============== SlottedPage ===============
@@ -35,12 +35,12 @@ SlottedPage::SlottedPage(Dbt &block, BlockID block_id, bool is_new) : DbBlock(bl
  * @return the new block's id
  */
 RecordID SlottedPage::add(const Dbt *data) {
-    if (!has_room(data->get_size()))
+    if (!has_room((u16) data->get_size()))
         throw DbBlockNoRoomError("not enough room for new record");
     u16 id = ++this->num_records;
     u16 size = (u16) data->get_size();
     this->end_free -= size;
-    u16 loc = this->end_free + 1;
+    u16 loc = this->end_free + 1U;
     put_header();
     put_header(id, size, loc);
     memcpy(this->address(loc), data->get_data(), size);
@@ -52,7 +52,7 @@ RecordID SlottedPage::add(const Dbt *data) {
  * @param record_id
  * @return the bits of the record as stored in the block, or nullptr if it has been deleted (freed by caller)
  */
-Dbt *SlottedPage::get(RecordID record_id) {
+Dbt *SlottedPage::get(RecordID record_id) const {
     u16 size, loc;
     get_header(size, loc, record_id);
     if (loc == 0)
@@ -103,10 +103,10 @@ void SlottedPage::del(RecordID record_id) {
  * Sequence of all non-deleted record IDs.
  * @return  sequence of IDs (freed by caller)
  */
-RecordIDs *SlottedPage::ids(void) {
+RecordIDs *SlottedPage::ids(void) const {
     RecordIDs *vec = new RecordIDs();
     u16 size, loc;
-    for (int record_id = 1; record_id <= this->num_records; record_id++) {
+    for (RecordID record_id = 1; record_id <= this->num_records; record_id++) {
         get_header(size, loc, record_id);
         if (loc != 0)
             vec->push_back(record_id);
@@ -120,9 +120,9 @@ RecordIDs *SlottedPage::ids(void) {
  * @param loc   set to the byte offset from given header
  * @param id    the id of the header to fetch
  */
-void SlottedPage::get_header(u_int16_t &size, u_int16_t &loc, RecordID id) {
-    size = get_n(4 * id);
-    loc = get_n(4 * id + 2);
+void SlottedPage::get_header(u_int16_t &size, u_int16_t &loc, RecordID id) const {
+    size = get_n((u16) 4 * id);
+    loc = get_n((u16) (4 * id + 2));
 }
 
 /**
@@ -136,8 +136,8 @@ void SlottedPage::put_header(RecordID id, u16 size, u16 loc) {
         size = this->num_records;
         loc = this->end_free;
     }
-    put_n(4 * id, size);
-    put_n(4 * id + 2, loc);
+    put_n((u16) 4 * id, size);
+    put_n((u16) (4 * id + 2), loc);
 }
 
 /**
@@ -146,7 +146,7 @@ void SlottedPage::put_header(RecordID id, u16 size, u16 loc) {
  * @param size   size of the new record (not including the header space needed)
  * @return       true if there is enough room, false otherwise
  */
-bool SlottedPage::has_room(u_int16_t size) {
+bool SlottedPage::has_room(u_int16_t size) const {
     u16 available = this->end_free - 4 * (this->num_records + 1);
     return size <= available;
 }
@@ -169,9 +169,9 @@ void SlottedPage::slide(u_int16_t start, u_int16_t end) {
         return;
 
     // slide data
-    void *to = this->address(this->end_free + 1 + shift);
-    void *from = this->address(this->end_free + 1);
-    int bytes = start - (this->end_free + 1);
+    void *to = this->address((u16) (this->end_free + 1 + shift));
+    void *from = this->address((u16) (this->end_free + 1));
+    int bytes = start - (this->end_free + 1U);
     memmove(to, from, bytes);
 
     // fix up headers to the right
@@ -192,7 +192,7 @@ void SlottedPage::slide(u_int16_t start, u_int16_t end) {
 /**
  * Get 2-byte integer at given offset in block.
  */
-u16 SlottedPage::get_n(u16 offset) {
+u16 SlottedPage::get_n(u16 offset) const {
     return *(u16 *) this->address(offset);
 }
 
@@ -210,7 +210,7 @@ void SlottedPage::put_n(u16 offset, u16 n) {
  * @param offset
  * @return
  */
-void *SlottedPage::address(u16 offset) {
+void *SlottedPage::address(u16 offset) const {
     return (void *) ((char *) this->block.get_data() + offset);
 }
 
@@ -218,6 +218,14 @@ void *SlottedPage::address(u16 offset) {
 /*
  * =============== HeapFile ===============
  */
+
+/**
+ * Constructor
+ * @param name
+ */
+HeapFile::HeapFile(string name) : DbFile(name), dbfilename(""), last(0), closed(true), db(_DB_ENV, 0) {
+    this->dbfilename = this->name + ".db";
+}
 
 /**
  * Create physical file.
@@ -266,9 +274,10 @@ SlottedPage *HeapFile::get_new(void) {
 
     // write out an empty block and read it back in so Berkeley DB is managing the memory
     SlottedPage *page = new SlottedPage(data, this->last, true);
-    this->db.put(nullptr, &key, &data, 0); // write it out with initialization applied
+    this->db.put(nullptr, &key, &data, 0); // write it out with initialization done to it
+    delete page;
     this->db.get(nullptr, &key, &data, 0);
-    return page;
+    return new SlottedPage(data, this->last);
 }
 
 /**
@@ -297,11 +306,21 @@ void HeapFile::put(DbBlock *block) {
  * Sequence of all block ids.
  * @return block ids
  */
-BlockIDs *HeapFile::block_ids() {
+BlockIDs *HeapFile::block_ids() const {
     BlockIDs *vec = new BlockIDs();
     for (BlockID block_id = 1; block_id <= this->last; block_id++)
         vec->push_back(block_id);
     return vec;
+}
+
+/**
+ * Ask BerkDb how many blocks we are currently using in the file.
+ * @return number of blocks
+ */
+uint32_t HeapFile::get_block_count() {
+    DB_BTREE_STAT *stat;
+    this->db.stat(nullptr, &stat, DB_FAST_STAT);
+    return stat->bt_ndata;
 }
 
 /**
@@ -312,16 +331,9 @@ void HeapFile::db_open(uint flags) {
     if (!this->closed)
         return;
     this->db.set_re_len(DbBlock::BLOCK_SZ); // record length - will be ignored if file already exists
-    this->dbfilename = this->name + ".db";
     this->db.open(nullptr, this->dbfilename.c_str(), nullptr, DB_RECNO, flags, 0644);
 
-    if (flags == 0) {
-        DB_BTREE_STAT stat;
-        this->db.stat(nullptr, &stat, DB_FAST_STAT);
-        this->last = stat.bt_ndata;
-    } else {
-        this->last = 0;
-    }
+    this->last = flags ? 0 : get_block_count();
     this->closed = false;
 }
 
@@ -411,7 +423,13 @@ void HeapTable::update(const Handle handle, const ValueDict *new_values) {
  * @param handle the row to be deleted
  */
 void HeapTable::del(const Handle handle) {
-    throw DbRelationError("Not implemented");
+    open();
+    BlockID block_id = handle.first;
+    RecordID record_id = handle.second;
+    SlottedPage *block = this->file.get(block_id);
+    block->del(record_id);
+    this->file.put(block);
+    delete block;
 }
 
 /**
@@ -419,8 +437,7 @@ void HeapTable::del(const Handle handle) {
  * @return a list of handles for qualifying rows
  */
 Handles *HeapTable::select() {
-    ValueDict empty;
-    return select(&empty);
+    return select(nullptr);
 }
 
 /**
@@ -429,13 +446,17 @@ Handles *HeapTable::select() {
  * @return list of handles of the selected rows
  */
 Handles *HeapTable::select(const ValueDict *where) {
+    open();
     Handles *handles = new Handles();
     BlockIDs *block_ids = file.block_ids();
     for (auto const &block_id: *block_ids) {
         SlottedPage *block = file.get(block_id);
         RecordIDs *record_ids = block->ids();
-        for (auto const &record_id: *record_ids)
-            handles->push_back(Handle(block_id, record_id));
+        for (auto const &record_id: *record_ids) {
+            Handle handle(block_id, record_id);
+            if (selected(handle, where))
+                handles->push_back(Handle(block_id, record_id));
+        }
         delete record_ids;
         delete block;
     }
@@ -469,8 +490,11 @@ ValueDict *HeapTable::project(Handle handle, const ColumnNames *column_names) {
     if (column_names->empty())
         return row;
     ValueDict *result = new ValueDict();
-    for (auto const &column_name: *column_names)
+    for (auto const &column_name: *column_names) {
+        if (row->find(column_name) == row->end())
+            throw DbRelationError("table does not have column named '" + column_name + "'");
         (*result)[column_name] = (*row)[column_name];
+    }
     delete row;
     return result;
 }
@@ -481,7 +505,7 @@ ValueDict *HeapTable::project(Handle handle, const ColumnNames *column_names) {
  * @return the full row dictionary
  * @throws DbRelationError if not valid
  */
-ValueDict *HeapTable::validate(const ValueDict *row) {
+ValueDict *HeapTable::validate(const ValueDict *row) const {
     ValueDict *full_row = new ValueDict();
     for (auto const &column_name: this->column_names) {
         Value value;
@@ -524,22 +548,29 @@ Handle HeapTable::append(const ValueDict *row) {
  * @param row data for the tuple
  * @return bits of the record as it should appear on disk
  */
-Dbt *HeapTable::marshal(const ValueDict *row) {
+Dbt *HeapTable::marshal(const ValueDict *row) const {
     char *bytes = new char[DbBlock::BLOCK_SZ]; // more than we need (we insist that one row fits into DbBlock::BLOCK_SZ)
     uint offset = 0;
     uint col_num = 0;
-    for (auto const &column_name: this->column_names) {
+    for (auto const& column_name: this->column_names) {
         ColumnAttribute ca = this->column_attributes[col_num++];
         ValueDict::const_iterator column = row->find(column_name);
         Value value = column->second;
+
         if (ca.get_data_type() == ColumnAttribute::DataType::INT) {
-            *(int32_t *) (bytes + offset) = value.n;
+            if (offset + 4 > DbBlock::BLOCK_SZ - 4)
+                throw DbRelationError("row too big to marshal");
+            *(int32_t*) (bytes + offset) = value.n;
             offset += sizeof(int32_t);
         } else if (ca.get_data_type() == ColumnAttribute::DataType::TEXT) {
-            uint size = value.s.length();
-            *(u16 *) (bytes + offset) = size;
+            u_long size = value.s.length();
+            if (size > UINT16_MAX)
+                throw DbRelationError("text field too long to marshal");
+            if (offset + 2 + size > DbBlock::BLOCK_SZ)
+                throw DbRelationError("row too big to marshal");
+            *(u16*) (bytes + offset) = size;
             offset += sizeof(u16);
-            memcpy(bytes + offset, value.s.c_str(), size); // assume ascii for now
+            memcpy(bytes+offset, value.s.c_str(), size); // assume ascii for now
             offset += size;
         } else {
             throw DbRelationError("Only know how to marshal INT and TEXT");
@@ -557,23 +588,23 @@ Dbt *HeapTable::marshal(const ValueDict *row) {
  * @param data file data for the tuple
  * @return row data for the tuple
  */
-ValueDict *HeapTable::unmarshal(Dbt *data) {
+ValueDict *HeapTable::unmarshal(Dbt *data) const {
     ValueDict *row = new ValueDict();
     Value value;
-    char *bytes = (char *) data->get_data();
+    char *bytes = (char*)data->get_data();
     uint offset = 0;
     uint col_num = 0;
-    for (auto const &column_name: this->column_names) {
+    for (auto const& column_name: this->column_names) {
         ColumnAttribute ca = this->column_attributes[col_num++];
         value.data_type = ca.get_data_type();
-        if (value.data_type == ColumnAttribute::DataType::INT) {
-            value.n = *(int32_t *) (bytes + offset);
+        if (ca.get_data_type() == ColumnAttribute::DataType::INT) {
+            value.n = *(int32_t*)(bytes + offset);
             offset += sizeof(int32_t);
-        } else if (value.data_type == ColumnAttribute::DataType::TEXT) {
-            u16 size = *(u16 *) (bytes + offset);
+        } else if (ca.get_data_type() == ColumnAttribute::DataType::TEXT) {
+            u16 size = *(u16*)(bytes + offset);
             offset += sizeof(u16);
             char buffer[DbBlock::BLOCK_SZ];
-            memcpy(buffer, bytes + offset, size);
+            memcpy(buffer, bytes+offset, size);
             buffer[size] = '\0';
             value.s = string(buffer);  // assume ascii for now
             offset += size;
@@ -583,6 +614,19 @@ ValueDict *HeapTable::unmarshal(Dbt *data) {
         (*row)[column_name] = value;
     }
     return row;
+}
+
+/**
+ * See if the row at the given handle satisfies the given where clause
+ * @param handle  row to check
+ * @param where   conditions to check
+ * @return        true if conditions met, false otherwise
+ */
+bool HeapTable::selected(Handle handle, const ValueDict *where) {
+    if (where == nullptr)
+        return true;
+    ValueDict *row = this->project(handle, where);
+    return *row == *where;
 }
 
 /**
@@ -699,6 +743,38 @@ bool test_slotted_page() {
     return true;
 }
 
+
+/**
+ * Test helper. Sets the row's a and b values.
+ * @param row to set
+ * @param a column value
+ * @param b column value
+ */
+void test_set_row(ValueDict &row, int a, string b) {
+    row["a"] = Value(a);
+    row["b"] = Value(b);
+}
+
+/**
+ * Test helper. Compares row to expected values for columns a and b.
+ * @param table    relation where row is
+ * @param handle   row to check
+ * @param a        expected column value
+ * @param b        expected column value
+ * @return         true if actual == expected for both columns, false otherwise
+ */
+bool test_compare(DbRelation &table, Handle handle, int a, string b) {
+    ValueDict *result = table.project(handle);
+    Value value = (*result)["a"];
+    if (value.n != a) {
+        delete result;
+        return false;
+    }
+    value = (*result)["b"];
+    delete result;
+    return !(value.s != b);
+}
+
 /**
  * Testing function for heap storage engine.
  * @return true if the tests all succeeded
@@ -728,22 +804,43 @@ bool test_heap_storage() {
     cout << "create_if_not_exists ok" << endl;
 
     ValueDict row;
-    row["a"] = Value(12);
-    row["b"] = Value("Hello!");
-    cout << "try insert" << endl;
+    string b = "Four score and seven years ago our fathers brought forth on this continent, a new nation, conceived in Liberty, and dedicated to the proposition that all men are created equal.";
+    test_set_row(row, -1, b);
     table.insert(&row);
     cout << "insert ok" << endl;
     Handles *handles = table.select();
-    cout << "select ok " << handles->size() << endl;
-    ValueDict *result = table.project((*handles)[0]);
-    cout << "project ok" << endl;
-    Value value = (*result)["a"];
-    if (value.n != 12) return false;
-    value = (*result)["b"];
-    if (value.s != "Hello!")return false;
-    table.drop();
-	delete handles;
-	delete result;
+    if (!test_compare(table, (*handles)[0], -1, b))
+        return false;
+    cout << "select/project ok " << handles->size() << endl;
+    delete handles;
 
+    Handle last_handle;
+    for (int i = 0; i < 1000; i++) {
+        test_set_row(row, i, b);
+        last_handle = table.insert(&row);
+    }
+    handles = table.select();
+    if (handles->size() != 1001)
+        return false;
+    int i = -1;
+    for (auto const &handle: *handles) {
+        if (!test_compare(table, handle, i++, b))
+            return false;
+    }
+    cout << "many inserts/select/projects ok" << endl;
+    delete handles;
+
+    table.del(last_handle);
+    handles = table.select();
+    if (handles->size() != 1000)
+        return false;
+    i = -1;
+    for (auto const &handle: *handles) {
+        if (!test_compare(table, handle, i++, b))
+            return false;
+    }
+    cout << "del ok" << endl;
+    table.drop();
+    delete handles;
     return true;
 }
