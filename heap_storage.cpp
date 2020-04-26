@@ -3,6 +3,7 @@
  * @author K Lundeen
  * @see Seattle University, CPSC5300
  */
+#include <cstring>
 #include "heap_storage.h"
 
 using namespace std;
@@ -741,6 +742,8 @@ bool test_heap_storage() {
     value = (*result)["b"];
     if (value.s != "Hello!")return false;
     table.drop();
+	delete handles;
+	delete result;
 
     return true;
 }
