@@ -30,17 +30,8 @@ class SlottedPage : public DbBlock {
 public:
     SlottedPage(Dbt &block, BlockID block_id, bool is_new = false);
 
-    // Big 5 - we only need the destructor, copy-ctor, move-ctor, and op= are unnecessary
-    // but we delete them explicitly just to make sure we don't use them accidentally
+    // Big 5 - use the defaults
     virtual ~SlottedPage() {}
-
-    SlottedPage(const SlottedPage &other) = delete;
-
-    SlottedPage(SlottedPage &&temp) = delete;
-
-    SlottedPage &operator=(const SlottedPage &other) = delete;
-
-    SlottedPage &operator=(SlottedPage &temp) = delete;
 
     virtual RecordID add(const Dbt *data);
 
@@ -69,7 +60,9 @@ protected:
     void put_n(uint16_t offset, uint16_t n);
 
     void *address(uint16_t offset) const;
+
+    friend bool test_slotted_page();
 };
 
-bool assertion_failure(std::string message);
+bool assertion_failure(std::string message, double x = -1, double y = -1);
 bool test_slotted_page();

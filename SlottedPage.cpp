@@ -142,9 +142,8 @@ void SlottedPage::put_header(RecordID id, u16 size, u16 loc) {
  * @param size   size of the new record (not including the header space needed)
  * @return       true if there is enough room, false otherwise
  */
-bool SlottedPage::has_room(u_int16_t size) const {
-    u16 available = this->end_free - 4 * (this->num_records + 1);
-    return size <= available;
+bool SlottedPage::has_room(u16 size) const {
+    return 4 * (this->num_records + 1) + size <= this->end_free;
 }
 
 /**
@@ -215,8 +214,13 @@ void *SlottedPage::address(u16 offset) const {
  * @param message reason for failure
  * @return false
  */
-bool assertion_failure(string message) {
-    cout << "FAILED TEST: " << message << endl;
+bool assertion_failure(string message, double x, double y) {
+    cout << "FAILED TEST: " << message;
+    if (x >= 0)
+        cout << " " << x;
+    if (y >= 0)
+        cout << " " << y;
+    cout << endl;
     return false;
 }
 
@@ -321,5 +325,45 @@ bool test_slotted_page() {
         return assertion_failure("wrong type thrown when add too big");
     }
 
+    // more volume
+    string gettysburg = "Four score and seven years ago our fathers brought forth on this continent, a new nation, conceived in Liberty, and dedicated to the proposition that all men are created equal.";
+    int32_t n = -1;
+    uint16_t text_length = gettysburg.size();
+    uint total_size = sizeof(n) + sizeof(text_length) + text_length;
+    char *data = new char[total_size];
+    *(int32_t *) data = n;
+    *(uint16_t *) (data + sizeof(n)) = text_length;
+    memcpy(data + sizeof(n) + sizeof(text_length), gettysburg.c_str(), text_length);
+    Dbt dbt(data, total_size);
+    vector<SlottedPage> page_list;
+    BlockID block_id = 1;
+    Dbt slot_dbt(new char[DbBlock::BLOCK_SZ], DbBlock::BLOCK_SZ);
+    slot = SlottedPage(slot_dbt, block_id++, true);
+    for (int i = 0; i < 10000; i++) {
+        try {
+            slot.add(&dbt);
+        } catch (DbBlockNoRoomError &exc) {
+            page_list.push_back(slot);
+            slot_dbt = Dbt(new char[DbBlock::BLOCK_SZ], DbBlock::BLOCK_SZ);
+            slot = SlottedPage(slot_dbt, block_id++, true);
+            slot.add(&dbt);
+        }
+    }
+    page_list.push_back(slot);
+    for (const auto &slot : page_list) {
+        RecordIDs *ids = slot.ids();
+        for (RecordID id : *ids) {
+            Dbt *record = slot.get(id);
+            if (record->get_size() != total_size)
+                return assertion_failure("more volume wrong size", block_id - 1, id);
+            void *stored = record->get_data();
+            if (memcmp(stored, data, total_size) != 0)
+                return assertion_failure("more volume wrong data", block_id - 1, id);
+            delete record;
+        }
+        delete ids;
+        delete[] (char *) slot.block.get_data();  // this is why we need to be a friend--just convenient
+    }
+    delete[] data;
     return true;
 }
