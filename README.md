@@ -11,4 +11,5 @@ To run valgrind (files must be compiled with -ggdb):
 ```sh
 $ valgrind --leak-check=full --suppressions=valgrind.supp ./sql5300 data
 ```
+Note that we've added suppression for the known issues with the Berkeley DB library <em>vis-à-vis</em> valgrind.
 
