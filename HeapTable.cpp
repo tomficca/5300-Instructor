@@ -110,7 +110,7 @@ Handles *HeapTable::select() {
 
 /**
  * The select command
- * @param where ignored for now FIXME
+ * @param where predicates to match
  * @return list of handles of the selected rows
  */
 Handles *HeapTable::select(const ValueDict *where) {
