@@ -21,8 +21,8 @@ SQLEXEC_H = SQLExec.h $(SCHEMA_TABLES_H)
 ParseTreeToString.o : ParseTreeToString.h
 SQLExec.o : $(SQLEXEC_H)
 SlottedPage.o : SlottedPage.h
-HeapFile.o : HeapFile.h
-HeapTable.o : HeapTable.h
+HeapFile.o : HeapFile.h SlottedPage.h
+HeapTable.o : $(HEAP_STORAGE_H)
 schema_tables.o : $(SCHEMA_TABLES_) ParseTreeToString.h
 sql5300.o : $(SQLEXEC_H) ParseTreeToString.h
 storage_engine.o : storage_engine.h

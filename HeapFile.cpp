@@ -111,7 +111,9 @@ BlockIDs *HeapFile::block_ids() const {
 uint32_t HeapFile::get_block_count() {
     DB_BTREE_STAT *stat;
     this->db.stat(nullptr, &stat, DB_FAST_STAT);
-    return stat->bt_ndata;
+    uint32_t bt_ndata = stat->bt_ndata;
+    free(stat);
+    return bt_ndata;
 }
 
 /**

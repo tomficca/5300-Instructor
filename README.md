@@ -6,6 +6,17 @@ DB Relation Manager project for CPSC5300/4300 at Seattle U, Spring 2020; Instruc
 - <code>Milestone2h</code> has the instructor-provided files for Milestone 2. (Note that <code>heap_storage.cpp</code> is just a stub.)
 - <code>Milestone2</code> is the instructor's attempt to complete the Milestone 2 assignment.
 
+## Unit Tests
+There are some tests for SlottedPage and HeapTable. They can be invoked from the <clode>SQL</code> prompt:
+```sql
+SQL> test
+```
+Be aware that failed tests may leave garbage Berkeley DB files lingering in your data directory. 
+If you don't care about any data in there, you are advised to just delete them all after a failed test.
+```sh
+$ rm -f data/*
+``` 
+
 ## Valgrind (Linux)
 To run valgrind (files must be compiled with -ggdb):
 ```sh

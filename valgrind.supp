@@ -1,19 +1,31 @@
 {
-   Berkeley DB leak from open
+   Berkeley DB possible leak from env_open
+   Memcheck:Leak
+   ...
+   fun:__env_open
+   ...
+}
+{
+   Berkeley DB definite leak from db_open
    Memcheck:Leak
    match-leak-kinds: definite
-   fun:malloc
-   fun:__os_malloc
-   fun:__os_strdup
+   ...
    fun:__db_open
-   fun:__db_open_pp
-   fun:_ZN2Db4openEP5DbTxnPKcS3_6DBTYPEji
-   fun:_ZN8HeapFile7db_openEj
-   fun:open
-   fun:open
-   fun:create_if_not_exists
-   fun:_Z17test_heap_storagev
-   fun:main
+   ...
+}
+{  
+   Berkeley DB possible leak from db_create
+   Memcheck:Leak
+   ...
+   fun:__db_create_internal
+   ...
+}
+{  
+   Berkeley DB possible leak from db_env_create
+   Memcheck:Leak
+   ...
+   fun:db_env_create
+   ...
 }
 {
    Berkeley DB questionable write
@@ -28,11 +40,5 @@
    fun:__db_refresh
    fun:__db_close
    fun:__db_close_pp
-   fun:_ZN2Db5closeEj
-   fun:close
-   fun:drop
-   fun:drop
-   fun:_Z17test_heap_storagev
-   fun:main
 }
 

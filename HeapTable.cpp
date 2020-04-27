@@ -200,6 +200,7 @@ Handle HeapTable::append(const ValueDict *row) {
         record_id = block->add(data);
     } catch (DbBlockNoRoomError &e) {
         // need a new block
+        delete block;
         block = this->file.get_new();
         record_id = block->add(data);
     }
