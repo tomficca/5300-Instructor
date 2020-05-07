@@ -20,7 +20,7 @@ $ rm -f data/*
 ``` 
 
 ## Valgrind (Linux)
-To run valgrind (files must be compiled with -ggdb):
+To run valgrind (files must be compiled with <code>-ggdb</code>):
 ```sh
 $ valgrind --leak-check=full --suppressions=valgrind.supp ./sql5300 data
 ```
