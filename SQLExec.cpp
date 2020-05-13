@@ -238,6 +238,7 @@ QueryResult *SQLExec::show_tables() {
     for (auto const &handle: *handles) {
         ValueDict *row = SQLExec::tables->project(handle, column_names);
         Identifier table_name = row->at("table_name").s;
+        delete row;
         if (table_name != Tables::TABLE_NAME && table_name != Columns::TABLE_NAME && table_name != Indices::TABLE_NAME)
             rows->push_back(row);
     }
