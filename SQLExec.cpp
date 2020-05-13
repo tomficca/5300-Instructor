@@ -230,7 +230,7 @@ QueryResult *SQLExec::show_tables() {
     column_attributes->push_back(ColumnAttribute(ColumnAttribute::TEXT));
 
     Handles *handles = SQLExec::tables->select();
-    u_long n = handles->size() - 2;
+    u_long n = handles->size() - 3;
 
     ValueDicts *rows = new ValueDicts;
     for (auto const &handle: *handles) {
