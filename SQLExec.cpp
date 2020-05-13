@@ -196,7 +196,9 @@ QueryResult *SQLExec::drop_table(const DropStatement *statement) {
     table.drop();
 
     // finally, remove from _tables schema
-    SQLExec::tables->del(*SQLExec::tables->select(&where)->begin()); // expect only one row from select
+    handles = SQLExec::tables->select(&where);
+    SQLExec::tables->del(*handles->begin()); // expect only one row from select
+    delete handles;
 
     return new QueryResult(string("dropped ") + table_name);
 }
